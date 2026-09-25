@@ -94,8 +94,10 @@ if(BUILD_TESTING)
             GTest::gtest
             GTest::gtest_main
             GTest::gmock
-            GTest::gmock_main
             ${DynStrUtf8Libname}
     )
     add_test(NAME DynStrUtf8Test COMMAND $<TARGET_FILE:dyn_str_utf8_test>)
+
+    include(GoogleTest)
+    gtest_discover_tests(dyn_str_utf8_test)
 endif ()

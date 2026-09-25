@@ -1,0 +1,41 @@
+name: C/C++ Build/Test
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+
+jobs:
+  build-and-test:
+    name: Ubuntu (Clang) [Debug]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build build-essential clang
+
+      - name: Set Compiler (Clang)
+        run: |
+          echo "CC=clang" >> $GITHUB_ENV
+          echo "CXX=clang++" >> $GITHUB_ENV
+
+      - name: Configure CMake
+        run: |
+          cmake -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DBUILD_TESTING=ON \
+            -DBUILD_U8_STR=ON
+
+      - name: Build Specific Targets
+        run: |
+          cmake --build build --config Debug --target dyn_str_utf8 dyn_str_utf8_test
+
+      - name: Run GoogleTest Suite (ctest)
+        run: |
+          ctest --test-dir build --output-on-failure -C Debug
