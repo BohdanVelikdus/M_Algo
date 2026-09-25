@@ -9,19 +9,19 @@ bool dyn_str_utf8_length(const dyn_str_utf8_t *str, size_t *out_len)
     }
     *out_len = 0;
 
-    if (str == NULL || str->ptr == NULL) {
-        return str && str->size == 0;
+    if (!dyn_str_utf8_is_valid(str)) {
+        return false;
     }
 
-    size_t count = 0;
-    for (size_t i = 0; i < str->size; )
-    {
-        const size_t bytes = dyn_str_utf8_codepoint_bytes((uint8_t)str->ptr[i]);
-        if (bytes == 0 || (i + bytes > str->size)) {
-            return false;
-        }
+    if (str->size == 0) {
+        return true;
+    }
 
-        i += bytes;
+    const uint8_t *bytes = (const uint8_t *)str->ptr;
+    size_t count = 0;
+
+    for (size_t i = 0; i < str->size; ) {
+        i += dyn_str_utf8_codepoint_bytes(bytes[i]);
         count++;
     }
 
@@ -29,20 +29,23 @@ bool dyn_str_utf8_length(const dyn_str_utf8_t *str, size_t *out_len)
     return true;
 }
 
-bool dyn_str_utf8_equals(const dyn_str_utf8_t *a, const dyn_str_utf8_t *b)
+bool dyn_str_utf8_equals(const dyn_str_utf8_t *lhs, const dyn_str_utf8_t *rhs)
 {
-    if (a == NULL || b == NULL) return false;
-    if (a->size != b->size) return false;
-    if (a->size == 0) return true;
+    if (lhs == NULL || rhs == NULL) return false;
+    if (lhs->size != rhs->size) return false;
+    if (lhs->size == 0) return true;
 
-    return memcmp(a->ptr, b->ptr, a->size) == 0;
+    return memcmp(lhs->ptr, rhs->ptr, lhs->size) == 0;
 }
 
 intptr_t dyn_str_utf8_find(const dyn_str_utf8_t *haystack, const dyn_str_utf8_t *needle)
 {
-    if (haystack == NULL || needle == NULL || needle->size == 0 || needle->size > haystack->size) {
+    if (haystack == NULL || needle == NULL || needle->size > haystack->size) {
         return -1;
     }
+
+    if (needle->size == 0)
+        return 0;
 
     for (size_t i = 0; i <= haystack->size - needle->size; ++i) {
         if (memcmp(haystack->ptr + i, needle->ptr, needle->size) == 0) {

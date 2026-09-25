@@ -33,7 +33,7 @@ if(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
     )
 endif ()
 
-# == Installing
+# == Installing ==
 
 set(EXPORT_NAME "${DynStrUtf8Libname}Targets")
 set(NAMESPACE "${DynStrUtf8Libname}::")
@@ -84,20 +84,40 @@ install(FILES
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${DynStrUtf8Libname}
 )
 
-# == Testing
+# == Testing ==
 
 if(BUILD_TESTING)
-    add_executable(dyn_str_utf8_test ${CMAKE_CURRENT_SOURCE_DIR}/tests/test.cpp)
-
-    target_link_libraries(dyn_str_utf8_test
-        PRIVATE
-            GTest::gtest
-            GTest::gtest_main
-            GTest::gmock
-            ${DynStrUtf8Libname}
-    )
-    add_test(NAME DynStrUtf8Test COMMAND $<TARGET_FILE:dyn_str_utf8_test>)
 
     include(GoogleTest)
-    gtest_discover_tests(dyn_str_utf8_test)
+
+    add_library(asan_flags INTERFACE)
+    target_compile_options(asan_flags INTERFACE
+            $<$<OR:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:GNU>>:-fsanitize=address -fno-omit-frame-pointer -g>
+    )
+    target_link_options(asan_flags INTERFACE
+            $<$<OR:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:GNU>>:-fsanitize=address>
+    )
+
+    set(executables "test_lifetime_io" "test_search" "test_validation" "test_memory" "test_modification" "test_encoding")
+    foreach (ITEM IN LISTS executables)
+        set(EXEC_NAME dyn_str_utf8_${ITEM})
+        add_executable(${EXEC_NAME} ${CMAKE_CURRENT_SOURCE_DIR}/tests/${ITEM}.cpp)
+        set_target_properties(${EXEC_NAME} PROPERTIES
+                CXX_STANDARD 20
+                CXX_STANDARD_REQUIRED ON
+        )
+
+        target_link_libraries(${EXEC_NAME}
+                PRIVATE
+                GTest::gtest
+                GTest::gtest_main
+                GTest::gmock
+                ${DynStrUtf8Libname}
+                asan_flags
+        )
+        add_test(NAME DynStrUtf8Test_${ITEM} COMMAND $<TARGET_FILE:${EXEC_NAME}>)
+        gtest_discover_tests(${EXEC_NAME})
+    endforeach ()
+
+
 endif ()

@@ -144,7 +144,8 @@ bool dyn_str_utf8_insert(dyn_str_utf8_t *dest, const size_t start_cp, const dyn_
 
 bool dyn_str_utf8_erase(dyn_str_utf8_t *str, const size_t start_cp, const size_t count_cp) // NOLINT(readability-non-const-parameter)
 {
-    if (str == NULL || str->ptr == NULL || count_cp == 0) return true;
+    if (str == NULL || str->ptr == NULL) return false;
+    if (count_cp == 0) return true;
 
     size_t byte_offset_start = 0;
     if (!codepoint_to_byte_offset(str, start_cp, &byte_offset_start)) {
@@ -153,7 +154,7 @@ bool dyn_str_utf8_erase(dyn_str_utf8_t *str, const size_t start_cp, const size_t
 
     size_t byte_offset_end = 0;
     if (!codepoint_to_byte_offset(str, start_cp + count_cp, &byte_offset_end)) {
-        byte_offset_end = str->size;
+        return false;
     }
 
     const size_t bytes_to_erase = byte_offset_end - byte_offset_start;
@@ -165,12 +166,15 @@ bool dyn_str_utf8_erase(dyn_str_utf8_t *str, const size_t start_cp, const size_t
     }
 
     str->size -= bytes_to_erase;
+    str->ptr[str->size] = '\0';
+
     return true;
 }
 
 bool dyn_str_utf8_concat(dyn_str_utf8_t *dest, const dyn_str_utf8_t *src)
 {
-    if (dest == NULL || src == NULL || src->size == 0) return true;
+    if (dest == NULL || src == NULL ) return false;
+    if (src->size == 0) return true;
 
     const size_t required = dest->size + src->size;
     if (dest->capacity < required) {
@@ -263,7 +267,8 @@ bool dyn_str_utf8_reverse(dyn_str_utf8_t *str) // NOLINT(readability-non-const-p
 
 bool dyn_str_utf8_trim(dyn_str_utf8_t *str) // NOLINT(readability-non-const-parameter)
 {
-    if (str == NULL || str->ptr == NULL || str->size == 0) return true;
+    if (str == NULL || str->ptr == NULL) return false;
+    if (str->size == 0) return true;
 
     size_t start_byte = 0;
     while (start_byte < str->size) {

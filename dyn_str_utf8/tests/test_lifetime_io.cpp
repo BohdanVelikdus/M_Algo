@@ -7,6 +7,7 @@
 #include <string>
 #include <filesystem>
 #include <string_view>
+#include <unordered_set>
 
 #if defined(_WIN32)
 #include <io.h>
@@ -35,7 +36,6 @@ protected:
     void TearDown() override {
         dyn_str_utf8_destroy(&str);
 
-        // Always restore stdin & stdout so GoogleTest can log test results
         RestoreIO();
 
         std::remove(test_file);
@@ -79,6 +79,87 @@ public:
     }
 };
 
+static const std::string utf8_sample = "Hello World 🦀 - UTF-8 Test String 🦔";
+
+struct AllocatorTracker {
+    size_t malloc_count = 0;
+    size_t realloc_count = 0;
+    size_t free_count = 0;
+    std::unordered_set<void*> active_allocations;
+
+    bool has_leaks() const {
+        return !active_allocations.empty();
+    }
+};
+
+static AllocatorTracker tracker;
+
+void* tracked_malloc(size_t size) {
+    void* ptr = std::malloc(size);
+    if (ptr) {
+        tracker.malloc_count++;
+        tracker.active_allocations.insert(ptr);
+    }
+    return ptr;
+}
+
+void* tracked_realloc(void* ptr, const size_t new_size) {
+
+    void* new_ptr = std::realloc(ptr, new_size);
+
+    if (ptr != nullptr) {
+        tracker.active_allocations.erase(ptr);
+    }
+
+    if (new_ptr != nullptr && new_size > 0) {
+        tracker.active_allocations.insert(new_ptr);
+        tracker.realloc_count++;
+    } else if (new_size == 0) {
+        tracker.free_count++;
+    }
+
+    return new_ptr;
+}
+
+void tracked_free(void* ptr) {
+    if (!ptr) return;
+
+    tracker.free_count++;
+    tracker.active_allocations.erase(ptr);
+    std::free(ptr);
+}
+
+TEST(U8_nF, InitWithAllocator)
+{
+    dyn_allocator_t alloc = {
+        .malloc_fn = tracked_malloc,
+        .realloc_fn = tracked_realloc,
+        .free_fn = tracked_free,
+    };
+
+    dyn_str_utf8_t str = DYN_STR_UTF8_ZERO;
+
+    const bool success = dyn_str_utf8_init_with_allocator(&str, alloc, 20);
+    ASSERT_TRUE(success);
+
+    dyn_str_utf8_destroy(&str);
+    ASSERT_FALSE(tracker.has_leaks());
+}
+
+TEST_F(U8, FromCstr)
+{
+    const std::string msg = "1234567";
+    bool success = dyn_str_utf8_from_cstr(&str, STDLIB_ALLOCATOR, msg.c_str());
+    EXPECT_TRUE(success);
+    RestoreIO();
+
+    size_t out_len = 0;
+    success = dyn_str_utf8_length(&str, &out_len);
+    ASSERT_TRUE(success);
+    EXPECT_EQ(out_len, 7);
+    EXPECT_EQ(memcmp(str.ptr, msg.c_str(), str.size), 0);
+}
+
 TEST_F(U8, StdinRedirectionTest)
 {
     SetInput("Hello UTF-8 🦀\n");
@@ -94,21 +175,6 @@ TEST_F(U8, StdinRedirectionTest)
     EXPECT_EQ(memcmp(str.ptr, "Hello UTF-8 🦀", str.size), 0);
     EXPECT_EQ(str.size, 16);
 
-}
-
-TEST_F(U8, FromCstr)
-{
-    const std::string msg = "1234567";
-    bool success = dyn_str_utf8_from_cstr(&str, msg.c_str());
-    EXPECT_TRUE(success);
-    RestoreIO();
-
-    size_t out_len = 0;
-    success = dyn_str_utf8_length(&str, &out_len);
-    ASSERT_TRUE(success);
-    EXPECT_EQ(out_len, 7);
-    EXPECT_EQ(memcmp(str.ptr, msg.c_str(), str.size), 0);
-    dyn_str_utf8_destroy(&str);
 }
 
 TEST_F(U8, PrintStreamEmpty)
@@ -130,7 +196,7 @@ TEST_F(U8, PrintStreamEmpty)
 TEST_F(U8, PrintStream)
 {
     RedirectOutput();
-    dyn_str_utf8_from_cstr(&str, "HelloUTF-8🦀");
+    dyn_str_utf8_from_cstr(&str, STDLIB_ALLOCATOR, "HelloUTF-8🦀");
     dyn_str_utf8_print_stream(&str, stdout);
     std::fflush(stdout);
     RestoreIO();
@@ -167,8 +233,8 @@ TEST_F(U8, ReadStreamChunkedCStrAsciiDelim)
 
     bool succ = dyn_str_utf8_read_line_stream_chunked(&str, '\n', file);
     ASSERT_TRUE(succ);
-
-    for (int i = 0; i < data.size(); ++i)
+    i = 0;
+    for (; i < data.size(); ++i)
     {
         ASSERT_EQ(data[i], str.ptr[i]);
     }
@@ -183,7 +249,6 @@ TEST_F(U8, ReadStreamChunkedUtf8)
     FILE *file = std::fopen(tempFile.string().c_str(), "w+b");
     ASSERT_NE(file, nullptr);
 
-    const std::string utf8_sample = "Hello World 🦀 - UTF-8 Test String 🦔";
     std::string expected_data;
 
     while (expected_data.size() < 2048)
@@ -214,8 +279,6 @@ TEST_F(U8, ReadStreamChunkedUtf8Utf8Delim)
     FILE *file = std::fopen(tempFile.string().c_str(), "w+b");
     ASSERT_NE(file, nullptr);
 
-    const std::string utf8_sample = "Hello World 🦀 - UTF-8 Test String 🦔";
-
     std::fwrite(utf8_sample.data(), sizeof(char), utf8_sample.size(), file);
     std::fwrite("\n", sizeof(char), 1, file);
 
@@ -234,65 +297,4 @@ TEST_F(U8, ReadStreamChunkedUtf8Utf8Delim)
 
     std::fclose(file);
     std::filesystem::remove(tempFile);
-}
-
-TEST_F(U8, ReverseString)
-{
-    const std::string utf8_sample = "Hello World 🦀 - UTF-8 Test String 🦔";
-    const std::string reversed = "🦔 gnirtS tseT 8-FTU - 🦀 dlroW olleH";
-    bool succ = dyn_str_utf8_from_cstr(&str, utf8_sample.c_str());
-    ASSERT_TRUE(succ);
-
-    dyn_str_utf8_reverse(&str);
-    for (int i = 0; i <  str.size; ++i)
-    {
-        ASSERT_EQ(reversed.c_str()[i], str.ptr[i]);
-    }
-}
-
-TEST_F(U8, SliceProp)
-{
-    const std::string utf8_sample = "Hello World 🦀 - UTF-8 Test String 🦔";
-    bool succ = dyn_str_utf8_from_cstr(&str, utf8_sample.c_str());
-    ASSERT_TRUE(succ);
-
-    dyn_str_utf8_t slice;
-    succ = dyn_str_utf8_init(&slice, 20);
-    ASSERT_TRUE(succ);
-
-    constexpr std::size_t pos = 0;
-    constexpr std::size_t count = 2;
-
-    succ = dyn_str_utf8_slice(&str, pos, count, &slice);
-    ASSERT_TRUE(succ);
-
-    constexpr auto* r = "He";
-    for (int i = 0; i < slice.size; ++i)
-    {
-        ASSERT_EQ(r[i], slice.ptr[i]);
-    }
-    dyn_str_utf8_destroy(&slice);
-}
-
-TEST_F(U8, SliceU8)
-{
-    const std::string utf8_sample = "Hello World 🦀 - UTF-8 Test String 🦔";
-    bool succ = dyn_str_utf8_from_cstr(&str, utf8_sample.c_str());
-    ASSERT_TRUE(succ);
-
-    dyn_str_utf8_t slice;
-    succ = dyn_str_utf8_init(&slice, 20);
-    ASSERT_TRUE(succ);
-
-    constexpr std::size_t pos = 10;
-    constexpr std::size_t count = 20;
-
-    succ = dyn_str_utf8_slice(&str, pos, count, &slice);
-    ASSERT_TRUE(succ);
-    const std::string_view r = std::string_view{utf8_sample}.substr(pos, count);
-    for (int i = 0; i < slice.size; ++i)
-    {
-        ASSERT_EQ(r[i], slice.ptr[i]);
-    }
-    dyn_str_utf8_destroy(&slice);
 }

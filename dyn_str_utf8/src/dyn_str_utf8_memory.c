@@ -3,7 +3,7 @@
 void dyn_str_utf8_clear(dyn_str_utf8_t *str)
 {
     if (str == NULL) return;
-    if (str->size != 0)
+    if (str->capacity != 0)
     {
         str->ptr[0] = '\0';
     }

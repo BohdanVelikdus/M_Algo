@@ -23,7 +23,7 @@ bool dyn_str_utf8_is_valid(const dyn_str_utf8_t *str)
             }
         }
 
-        // 3. Strict UTF-8 Validation (overlong encodings & surrogate halves)
+        // 3. Strict UTF-8 Validation (overlong encodings, surrogates, & upper bounds)
         if (len == 2) {
             // Reject overlong 2-byte sequences (code points < U+0080)
             if (bytes[i] < 0xC2) return false;
@@ -32,8 +32,13 @@ bool dyn_str_utf8_is_valid(const dyn_str_utf8_t *str)
             if (bytes[i] == 0xE0 && bytes[i + 1] < 0xA0) return false; // Overlong
             if (bytes[i] == 0xED && bytes[i + 1] >= 0xA0) return false; // Surrogate
         } else if (len == 4) {
+            // Reject overlong 4-byte sequences
             if (bytes[i] == 0xF0 && bytes[i + 1] < 0x90) return false; // Overlong
-            if (bytes[i] == 0xF4 && bytes[i + 1] > 0x8F) return false; // Out of Unicode range
+
+            // Reject lead bytes > 0xF4 OR 0xF4 with 2nd byte > 0x8F (Exceeds U+10FFFF)
+            if (bytes[i] > 0xF4 || (bytes[i] == 0xF4 && bytes[i + 1] > 0x8F)) {
+                return false;
+            }
         }
 
         i += len;

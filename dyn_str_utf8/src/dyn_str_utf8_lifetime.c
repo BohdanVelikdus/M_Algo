@@ -26,9 +26,10 @@ bool dyn_str_utf8_init_with_allocator(dyn_str_utf8_t *str, dyn_allocator_t alloc
     return true;
 }
 
-bool dyn_str_utf8_from_cstr(dyn_str_utf8_t *str, const char *cstr)
+bool dyn_str_utf8_from_cstr(dyn_str_utf8_t *str, const dyn_allocator_t allocator, const char *cstr)
 {
     if (str == NULL || cstr == NULL) return false;
+    str->allocator = allocator;
 
     const size_t len = strlen(cstr);
 
@@ -52,8 +53,12 @@ bool dyn_str_utf8_from_cstr(dyn_str_utf8_t *str, const char *cstr)
 void dyn_str_utf8_destroy(dyn_str_utf8_t *str)
 {
     if (str == NULL) return;
-    str->allocator.free_fn(str->ptr);
+
+    if (str->ptr != NULL) {
+        str->allocator.free_fn(str->ptr);
+    }
     str->ptr = NULL;
     str->size = 0;
     str->capacity = 0;
+    memset(&str->allocator, 0, sizeof(dyn_allocator_t));
 }

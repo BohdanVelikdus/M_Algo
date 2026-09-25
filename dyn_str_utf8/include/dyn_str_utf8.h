@@ -39,10 +39,17 @@ typedef struct {
 // Allocator
 static const dyn_allocator_t STDLIB_ALLOCATOR = { .malloc_fn = malloc, .realloc_fn = realloc, .free_fn = free };
 
+#define DYN_STR_UTF8_ZERO { \
+    .ptr = NULL, \
+    .size = 0, \
+    .capacity = 0, \
+    .allocator = STDLIB_ALLOCATOR \
+}
+
 // Lifetime
 bool dyn_str_utf8_init(dyn_str_utf8_t *str, size_t initial_capacity);
 bool dyn_str_utf8_init_with_allocator(dyn_str_utf8_t *str, dyn_allocator_t allocator, size_t initial_capacity);
-bool dyn_str_utf8_from_cstr(dyn_str_utf8_t *str, const char *cstr);
+bool dyn_str_utf8_from_cstr(dyn_str_utf8_t *str, dyn_allocator_t allocator, const char *cstr);
 void dyn_str_utf8_destroy(dyn_str_utf8_t *str);
 
 // Memory
@@ -57,7 +64,7 @@ bool dyn_str_utf8_is_empty(const dyn_str_utf8_t *str);
 
 // Inspection & Search
 bool dyn_str_utf8_length(const dyn_str_utf8_t *str, size_t *out_len);
-bool dyn_str_utf8_equals(const dyn_str_utf8_t *a, const dyn_str_utf8_t *b);
+bool dyn_str_utf8_equals(const dyn_str_utf8_t *lhs, const dyn_str_utf8_t *rhs);
 intptr_t dyn_str_utf8_find(const dyn_str_utf8_t *haystack, const dyn_str_utf8_t *needle);
 bool dyn_str_utf8_starts_with(const dyn_str_utf8_t *str, const dyn_str_utf8_t *prefix);
 bool dyn_str_utf8_ends_with(const dyn_str_utf8_t *str, const dyn_str_utf8_t *suffix);
