@@ -34,7 +34,7 @@ jobs:
 
       - name: Build Specific Targets
         run: |
-          cmake --build build --config Debug --target dyn_str_utf8 dyn_str_utf8_test
+          cmake --build build --config Debug --target dyn_str_utf8 test_lifetime_io test_search test_validation test_memory test_modification test_encoding
 
       - name: Run GoogleTest Suite (ctest)
         run: |
