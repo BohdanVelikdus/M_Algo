@@ -25,7 +25,7 @@ typedef struct
 
 typedef struct
 {
-    char *ptr;
+    unsigned char *ptr;
     size_t size;
     size_t capacity;
     dyn_allocator_t allocator;
@@ -51,6 +51,10 @@ bool dyn_str_utf8_init(dyn_str_utf8_t *str, size_t initial_capacity);
 bool dyn_str_utf8_init_with_allocator(dyn_str_utf8_t *str, dyn_allocator_t allocator, size_t initial_capacity);
 bool dyn_str_utf8_from_cstr(dyn_str_utf8_t *str, dyn_allocator_t allocator, const char *cstr);
 void dyn_str_utf8_destroy(dyn_str_utf8_t *str);
+
+// Copy & Swap
+bool dyn_str_utf8_copy(const dyn_str_utf8_t *src, dyn_str_utf8_t *dst);
+bool dyn_str_utf8_move(dyn_str_utf8_t *src, dyn_str_utf8_t *dst);
 
 // Memory
 void dyn_str_utf8_clear(dyn_str_utf8_t *str);

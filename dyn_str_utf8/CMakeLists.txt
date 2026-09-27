@@ -11,6 +11,7 @@ add_library(${DynStrUtf8Libname}
     ${CMAKE_CURRENT_SOURCE_DIR}/src/dyn_str_utf8_modification.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/dyn_str_utf8_io.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/dyn_str_utf8_encoding.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/dyn_str_utf8_copy_swap.c
 )
 
 target_include_directories(${DynStrUtf8Libname}
@@ -98,7 +99,7 @@ if(BUILD_TESTING)
             $<$<OR:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:GNU>>:-fsanitize=address>
     )
 
-    set(executables "test_lifetime_io" "test_search" "test_validation" "test_memory" "test_modification" "test_encoding")
+    set(executables "test_lifetime_io" "test_search" "test_validation" "test_memory" "test_modification" "test_encoding" "test_copy_swap")
     foreach (ITEM IN LISTS executables)
         set(EXEC_NAME dyn_str_utf8_${ITEM})
         add_executable(${EXEC_NAME} ${CMAKE_CURRENT_SOURCE_DIR}/tests/${ITEM}.cpp)

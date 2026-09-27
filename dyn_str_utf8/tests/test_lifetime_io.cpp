@@ -266,7 +266,7 @@ TEST_F(U8, ReadStreamChunkedUtf8)
 
     for (int i = 0; i < expected_data.size(); ++i)
     {
-        ASSERT_EQ(expected_data[i], str.ptr[i]);
+        ASSERT_EQ(static_cast<uint8_t>(expected_data[i]), static_cast<uint8_t>(str.ptr[i]));
     }
 
     std::fclose(file);

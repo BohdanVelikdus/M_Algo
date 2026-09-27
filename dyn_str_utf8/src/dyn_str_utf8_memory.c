@@ -19,7 +19,7 @@ bool dyn_str_utf8_grow(dyn_str_utf8_t *str, const size_t new_capacity)
 {
     if (str == NULL || new_capacity == 0) return false;
 
-    char *new_ptr = str->allocator.realloc_fn(str->ptr, new_capacity);
+    unsigned char *new_ptr = str->allocator.realloc_fn(str->ptr, new_capacity);
     if (new_ptr == NULL) return false;
 
     str->ptr = new_ptr;
@@ -35,7 +35,7 @@ bool dyn_str_utf8_shrink_to_fit(dyn_str_utf8_t *str)
 
     const size_t new_capacity = (str->size == 0) ? 1 : str->size;
 
-    char *shunk_ptr = str->allocator.realloc_fn(str->ptr, new_capacity);
+    unsigned char *shunk_ptr = str->allocator.realloc_fn(str->ptr, new_capacity);
     if (shunk_ptr == NULL) return false;
 
     str->ptr = shunk_ptr;

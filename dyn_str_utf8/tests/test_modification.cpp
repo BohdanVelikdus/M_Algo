@@ -9,7 +9,7 @@
     do { \
         ASSERT_GE((ptr_size), 0u) << "The size must be greater equal than 0"; \
         for (size_t i = 0; i < (size_t)(ptr_size); ++i) { \
-            ASSERT_EQ((ptr1)[i], (ptr2)[i]) << (msg) << " at index " << i; \
+            ASSERT_EQ(static_cast<uint8_t>((ptr1)[i]), static_cast<uint8_t>((ptr2)[i])) << (msg) << " at index " << i; \
         } \
     } while (0)
 
@@ -38,7 +38,7 @@ TEST_F(U8, ReverseString)
     dyn_str_utf8_reverse(&str);
     for (int i = 0; i <  str.size; ++i)
     {
-        ASSERT_EQ(reversed.c_str()[i], str.ptr[i]);
+        ASSERT_EQ(static_cast<uint8_t>(reversed.c_str()[i]), static_cast<uint8_t>(str.ptr[i]));
     }
 }
 
@@ -82,7 +82,7 @@ TEST_F(U8, SliceU8)
     const std::string_view r = std::string_view{utf8_sample}.substr(pos, count);
     for (int i = 0; i < slice.size; ++i)
     {
-        ASSERT_EQ(r[i], slice.ptr[i]);
+        ASSERT_EQ(static_cast<uint8_t>(r[i]), static_cast<uint8_t>(slice.ptr[i]));
     }
     dyn_str_utf8_destroy(&slice);
 }
@@ -267,7 +267,7 @@ TEST(Utf8MutationTest, ReplaceSubstrings) {
     ASSERT_TRUE(dyn_str_utf8_from_cstr(&replacement, STDLIB_ALLOCATOR, "🍊"));
 
     EXPECT_TRUE(dyn_str_utf8_replace(&str, &target, &replacement));
-    EXPECT_TRUE(std::string_view(str.ptr, str.size).find("🍊") != std::string_view::npos);
+    EXPECT_TRUE(std::string_view(reinterpret_cast<const char*>(str.ptr), str.size).find("🍊") != std::string_view::npos);
 
     dyn_str_utf8_destroy(&str);
     dyn_str_utf8_destroy(&target);

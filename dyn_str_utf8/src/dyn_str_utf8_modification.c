@@ -28,9 +28,9 @@ static bool codepoint_to_byte_offset(const dyn_str_utf8_t *src, const size_t tar
     return true;
 }
 
-static void reverse_bytes_range(char *start, char *end) {
+static void reverse_bytes_range(unsigned char *start, unsigned char *end) {
     while (start < end) {
-        const char tmp = *start;
+        const unsigned char tmp = *start;
         *start++ = *end;
         *end-- = tmp;
     }
@@ -109,11 +109,11 @@ bool dyn_str_utf8_insert(dyn_str_utf8_t *dest, const size_t start_cp, const dyn_
     const size_t bytes_to_move = dest->size - byte_offset;
     const size_t required_capacity = dest->size + src->size;
 
-    const char *src_bytes = src->ptr;
-    char *temp_src = NULL;
+    const unsigned char *src_bytes = src->ptr;
+    unsigned char *temp_src = NULL;
 
     if (dest == src) {
-        temp_src = (char *)dest->allocator.malloc_fn(src->size);
+        temp_src = (unsigned char *)dest->allocator.malloc_fn(src->size);
         if (temp_src == NULL) return false;
 
         memcpy(temp_src, src->ptr, src->size);
@@ -278,7 +278,7 @@ bool dyn_str_utf8_trim(dyn_str_utf8_t *str) // NOLINT(readability-non-const-para
             cp_len = 1;
         }
 
-        const uint32_t cp = utf8_bytes_to_uint32(&str->ptr[start_byte]);
+        const uint32_t cp = utf8_bytes_to_uint32((const char*)&str->ptr[start_byte]);
 
         if (!is_utf8_whitespace(cp)) {
             break;
@@ -304,7 +304,7 @@ bool dyn_str_utf8_trim(dyn_str_utf8_t *str) // NOLINT(readability-non-const-para
             cp_len = 1;
         }
 
-        const uint32_t cp = utf8_bytes_to_uint32(&str->ptr[scan]);
+        const uint32_t cp = utf8_bytes_to_uint32((const char*)&str->ptr[scan]);
 
         if (!is_utf8_whitespace(cp)) {
             break;

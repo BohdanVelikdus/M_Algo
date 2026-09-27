@@ -41,7 +41,8 @@ jobs:
             dyn_str_utf8_test_validation \
             dyn_str_utf8_test_memory \
             dyn_str_utf8_test_modification \
-            dyn_str_utf8_test_encoding
+            dyn_str_utf8_test_encoding \
+            dyn_str_utf8_test_copy_swap
 
       - name: Run GoogleTest Suite (ctest)
         run: |
