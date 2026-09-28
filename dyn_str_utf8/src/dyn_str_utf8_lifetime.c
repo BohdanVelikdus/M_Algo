@@ -2,6 +2,14 @@
 
 #include <string.h>
 
+/**
+ * @brief Constructor for a utf8 string. Must be called before using struct object.
+ * Uses STDLIB_ALLOCATOR for allocating memory(malloc, realloc, free)
+ * @param str destination string
+ * @param initial_capacity initial capacity of string
+ * @return True - in case of success
+ * @return False - in case of an error allocating memory
+ */
 bool dyn_str_utf8_init(dyn_str_utf8_t *str, const size_t initial_capacity)
 {
     if (str == NULL || initial_capacity <= 0) return false;
@@ -14,7 +22,15 @@ bool dyn_str_utf8_init(dyn_str_utf8_t *str, const size_t initial_capacity)
     return true;
 }
 
-bool dyn_str_utf8_init_with_allocator(dyn_str_utf8_t *str, dyn_allocator_t allocator, size_t initial_capacity)
+/**
+ * @brief Constructor for a utf8 string. Must be called before using struct object. Accepts allocator
+ * @param str destination string
+ * @param initial_capacity initial capacity of string
+ * @param allocator a structure, which holds a pointers to custom functions for allocating a memory
+ * @return True - in case of success
+ * @return False - in case of an error allocating memory
+ */
+bool dyn_str_utf8_init_with_allocator(dyn_str_utf8_t *str, const dyn_allocator_t allocator, const size_t initial_capacity)
 {
     if (str == NULL || initial_capacity <= 0) return false;
     str->allocator = allocator;
@@ -26,12 +42,24 @@ bool dyn_str_utf8_init_with_allocator(dyn_str_utf8_t *str, dyn_allocator_t alloc
     return true;
 }
 
+/**
+ * @brief Constructor for a utf8 string. OBJECT MUST BE ZEROED BEFORE USING THIS FUNCTION. Use c string for copying from
+ * @param str destination string
+ * @param allocator a structure, which holds a pointers to custom functions for allocating a memory
+ * @param cstr a c-string, from which buffer would be constructed
+ * @return True - in case of success
+ * @return False - in case of an error allocating memory, or invalid UTF-8
+ */
 bool dyn_str_utf8_from_cstr(dyn_str_utf8_t *str, const dyn_allocator_t allocator, const char *cstr)
 {
     if (str == NULL || cstr == NULL) return false;
     str->allocator = allocator;
 
     const size_t len = strlen(cstr);
+    if (!dyn_str_utf8_is_valid_utf8_cstring((const utf8_byte*)cstr, len))
+    {
+        return false;
+    }
 
     if (str->capacity < len || str->ptr == NULL)
     {
@@ -50,6 +78,10 @@ bool dyn_str_utf8_from_cstr(dyn_str_utf8_t *str, const dyn_allocator_t allocator
     return true;
 }
 
+/**
+ * @brief Destructor for a utf8 string. Must be called after end of life of object
+ * @param str object to be destroyed
+ */
 void dyn_str_utf8_destroy(dyn_str_utf8_t *str)
 {
     if (str == NULL) return;

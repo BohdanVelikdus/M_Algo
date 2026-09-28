@@ -2,6 +2,13 @@
 
 #include "dyn_str_utf8.h"
 
+/**
+ * @brief Copy function
+ * @param src source string
+ * @param dst destination string
+ * @return True - in case of success
+ * @return False - in case of an error allocating memory
+ */
 bool dyn_str_utf8_copy(const dyn_str_utf8_t *src, dyn_str_utf8_t *dst)
 {
     if (src == NULL || dst == NULL) return false;
@@ -24,6 +31,13 @@ bool dyn_str_utf8_copy(const dyn_str_utf8_t *src, dyn_str_utf8_t *dst)
     return true;
 }
 
+/**
+ * @brief Consumes the src string, and fill dst.
+ * @param src - source string
+ * @param dst - destination string
+ * @return True - in case of success
+ * @return False - in case of an error allocating memory
+ */
 bool dyn_str_utf8_move(dyn_str_utf8_t *src, dyn_str_utf8_t *dst)
 {
     if (src == NULL || dst == NULL) return false;

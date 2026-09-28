@@ -270,3 +270,89 @@ TEST(Utf8LengthSafetyTest, HandlesNullPointersGracefully) {
     dyn_str_utf8_destroy(&valid_str);
 }
 
+class U8AtTest : public ::testing::Test
+{
+protected:
+    dyn_str_utf8_t str = DYN_STR_UTF8_ZERO;
+
+    void SetUp() override
+    {
+        ASSERT_TRUE(dyn_str_utf8_init(&str, 10));
+    }
+
+    void TearDown() override
+    {
+        dyn_str_utf8_destroy(&str);
+    }
+};
+
+TEST_F(U8AtTest, OutOfBoundOrFalse)
+{
+    utf8_byte byte;
+    EXPECT_FALSE(dyn_str_utf8_at(&str, 0, &byte));
+    EXPECT_FALSE(dyn_str_utf8_at(&str, 0, nullptr));
+    EXPECT_FALSE(dyn_str_utf8_at(nullptr, 0, &byte));
+
+    EXPECT_TRUE(dyn_str_utf8_append_codepoint(&str, 'H'));
+    EXPECT_TRUE(dyn_str_utf8_append_codepoint(&str, 'i'));
+
+    EXPECT_TRUE(dyn_str_utf8_at(&str, 0, &byte));
+    ASSERT_EQ('H', byte);
+
+    EXPECT_TRUE(dyn_str_utf8_at(&str, 1, &byte));
+    ASSERT_EQ('i', byte);
+
+    EXPECT_FALSE(dyn_str_utf8_at(&str, 2, &byte));
+    EXPECT_FALSE(dyn_str_utf8_at(&str, 99, &byte));
+}
+
+TEST_F(U8AtTest, AtCodepointNull)
+{
+    uint32_t cp = 0;
+
+    EXPECT_FALSE(dyn_str_utf8_at_codepoint(nullptr, 0, &cp));
+    EXPECT_FALSE(dyn_str_utf8_at_codepoint(&str, 0, nullptr));
+    EXPECT_FALSE(dyn_str_utf8_at_codepoint(&str, 0, &cp));
+}
+
+TEST_F(U8AtTest, AtCodepoint)
+{
+    ASSERT_TRUE(dyn_str_utf8_append_codepoint(&str, 0x0041)); // Index 0
+    ASSERT_TRUE(dyn_str_utf8_append_codepoint(&str, 0x03BB)); // Index 1
+    ASSERT_TRUE(dyn_str_utf8_append_codepoint(&str, 0x20AC)); // Index 2
+    ASSERT_TRUE(dyn_str_utf8_append_codepoint(&str, 0x1F980));// Index 3
+
+    uint32_t cp = 0;
+
+    EXPECT_TRUE(dyn_str_utf8_at_codepoint(&str, 0, &cp));
+    EXPECT_EQ(cp, 0x0041u);
+
+    EXPECT_TRUE(dyn_str_utf8_at_codepoint(&str, 1, &cp));
+    EXPECT_EQ(cp, 0x03BB);
+
+    EXPECT_TRUE(dyn_str_utf8_at_codepoint(&str, 2, &cp));
+    EXPECT_EQ(cp, 0x20AC);
+
+    EXPECT_TRUE(dyn_str_utf8_at_codepoint(&str, 3, &cp));
+    EXPECT_EQ(cp, 0x1F980);
+
+    EXPECT_FALSE(dyn_str_utf8_at_codepoint(&str, 4, &cp));
+}
+
+TEST_F(U8AtTest, AtCodepointCompAt)
+{
+    ASSERT_TRUE(dyn_str_utf8_append_codepoint(&str, 0x03BB));
+    ASSERT_TRUE(dyn_str_utf8_append_codepoint(&str, 0x1F980));
+
+    EXPECT_EQ(str.size, 6u);
+
+    // Byte-level access: byte at offset 2 is the lead byte of '🦀' (0xF0)
+    utf8_byte raw_byte = 0;
+    EXPECT_TRUE(dyn_str_utf8_at(&str, 2, &raw_byte));
+    EXPECT_EQ(raw_byte, 0xF0);
+
+    // Codepoint-level access: codepoint index 1 is U+1F980
+    uint32_t cp = 0;
+    EXPECT_TRUE(dyn_str_utf8_at_codepoint(&str, 1, &cp));
+    EXPECT_EQ(cp, 0x1F980u);
+}

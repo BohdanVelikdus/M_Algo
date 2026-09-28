@@ -1,35 +1,46 @@
 #include "dyn_str_utf8.h"
 
+/**
+ * @brief Convert a number, which represents a Unicode symbol into an UTF-8 seq.
+ * Used for parsing purposes, when we read one char by one, compare and evaluate then we read stop unicode symbol
+ * @param cp Converts unicode symbol number into valid UTF-8 seq.
+ * @return Struct with a len in UTF-8 and bytes
+ */
 utf8_delim_bytes_t dyn_str_utf8_encode_utf8(const uint32_t cp) {
     utf8_delim_bytes_t d = {0};
     if (cp <= 0x7F) {
-        d.bytes[0] = (uint8_t)cp;
+        d.bytes[0] = cp;
         d.len = 1;
     }
     else if (cp <= 0x7FF) {
-        d.bytes[0] = (uint8_t)(0xC0 | (cp >> 6));
-        d.bytes[1] = (uint8_t)(0x80 | (cp & 0x3F));
+        d.bytes[0] = 0xC0 | (cp >> 6);
+        d.bytes[1] = 0x80 | (cp & 0x3F);
         d.len = 2;
     }
     else if (cp <= 0xFFFF) {
         if (cp >= 0xD800 && cp <= 0xDFFF) {
             return d;
         }
-        d.bytes[0] = (uint8_t)(0xE0 | (cp >> 12));
-        d.bytes[1] = (uint8_t)(0x80 | ((cp >> 6) & 0x3F));
-        d.bytes[2] = (uint8_t)(0x80 | (cp & 0x3F));
+        d.bytes[0] = 0xE0 | (cp >> 12);
+        d.bytes[1] = 0x80 | ((cp >> 6) & 0x3F);
+        d.bytes[2] = 0x80 | (cp & 0x3F);
         d.len = 3;
     }
     else if (cp <= 0x10FFFF) {
-        d.bytes[0] = (uint8_t)(0xF0 | (cp >> 18));
-        d.bytes[1] = (uint8_t)(0x80 | ((cp >> 12) & 0x3F));
-        d.bytes[2] = (uint8_t)(0x80 | ((cp >> 6) & 0x3F));
-        d.bytes[3] = (uint8_t)(0x80 | (cp & 0x3F));
+        d.bytes[0] = 0xF0 | (cp >> 18);
+        d.bytes[1] = 0x80 | ((cp >> 12) & 0x3F);
+        d.bytes[2] = 0x80 | ((cp >> 6) & 0x3F);
+        d.bytes[3] = 0x80 | (cp & 0x3F);
         d.len = 4;
     }
     return d;
 }
 
+/**
+ * @brief Function, returns Unicode number of a UTF-8 seq.
+ * @param utf8_str accepts bytes
+ * @return Unicode value of UTF-8 seq.
+ */
 uint32_t utf8_bytes_to_uint32(const char *utf8_str) {
     const uint8_t *bytes = (const uint8_t *)utf8_str;
     if (bytes == NULL)
@@ -57,15 +68,12 @@ uint32_t utf8_bytes_to_uint32(const char *utf8_str) {
     return 0;
 }
 
-// size_t dyn_str_utf8_codepoint_bytes(const uint8_t byte) {
-//     if ((byte & 0x80) == 0x00) return 1;
-//     if ((byte & 0xE0) == 0xC0) return 2;
-//     if ((byte & 0xF0) == 0xE0) return 3;
-//     if ((byte & 0xF8) == 0xF0) return 4;
-//     return 0;
-// }
-
-size_t dyn_str_utf8_codepoint_bytes(const uint8_t byte)
+/**
+ * @brief Function, returns a predicted size of sequence. Provide skip size. Used while iterating over string
+ * @param byte First byte of UTF-8 sequence.
+ * @return The predicted size of the UTF-8 seq. 0 - invalid UTF-8 char
+ */
+size_t dyn_str_utf8_codepoint_bytes(const utf8_byte byte)
 {
     // 1-byte ASCII (0x00..0x7F)
     if (byte <= 0x7F) {
@@ -91,7 +99,6 @@ size_t dyn_str_utf8_codepoint_bytes(const uint8_t byte)
     if (byte <= 0xF4) {
         return 4;
     }
-
     // Reject 0xF5..0xFF
     return 0;
 }

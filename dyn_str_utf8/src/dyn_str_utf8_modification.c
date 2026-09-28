@@ -2,32 +2,6 @@
 
 #include <string.h>
 
-static bool codepoint_to_byte_offset(const dyn_str_utf8_t *src, const size_t target_cp, size_t *out_byte_offset)
-{
-    if (src == NULL || out_byte_offset == NULL) return false;
-
-    size_t byte_offset = 0;
-    size_t current_cp = 0;
-
-    while (byte_offset < src->size && current_cp < target_cp) {
-        size_t bytes = dyn_str_utf8_codepoint_bytes((uint8_t)src->ptr[byte_offset]);
-
-        if (bytes == 0 || (byte_offset + bytes > src->size)) {
-            bytes = 1;
-        }
-
-        byte_offset += bytes;
-        current_cp++;
-    }
-
-    if (current_cp < target_cp) {
-        return false;
-    }
-
-    *out_byte_offset = byte_offset;
-    return true;
-}
-
 static void reverse_bytes_range(unsigned char *start, unsigned char *end) {
     while (start < end) {
         const unsigned char tmp = *start;
@@ -36,7 +10,7 @@ static void reverse_bytes_range(unsigned char *start, unsigned char *end) {
     }
 }
 
-static bool is_utf8_whitespace(uint32_t cp) {
+bool dyn_str_utf8_is_utf8_whitespace(const uint32_t cp) {
     return cp == ' '  || cp == '\t' || cp == '\n' || cp == '\r' ||
            cp == '\v' || cp == '\f' ||
            cp == 0x00A0 || // Non-breaking space
@@ -49,6 +23,13 @@ static bool is_utf8_whitespace(uint32_t cp) {
            cp == 0x3000;   // Ideographic space (CJK)
 }
 
+/**
+ * @brief Apennds a codepoint to a string
+ * @param str dst string
+ * @param cp codepoint to be appended
+ * @return True - success
+ * @return False - allocation error
+ */
 bool dyn_str_utf8_append_codepoint(dyn_str_utf8_t *str, const uint32_t cp)
 {
     if (str == NULL) return false;
@@ -70,6 +51,12 @@ bool dyn_str_utf8_append_codepoint(dyn_str_utf8_t *str, const uint32_t cp)
     return true;
 }
 
+/**
+ * @brief Remove last codepoint
+ * @param str src string
+ * @return True - success remove
+ * @return False - invalid codepoint at the end
+ */
 bool dyn_str_utf8_pop_back_codepoint(dyn_str_utf8_t *str)
 {
     if (str == NULL || str->ptr == NULL || str->size == 0) {
@@ -83,7 +70,7 @@ bool dyn_str_utf8_pop_back_codepoint(dyn_str_utf8_t *str)
         i--;
         bytes_to_remove++;
 
-        if (((uint8_t)str->ptr[i] & 0xC0) != 0x80) {
+        if ((str->ptr[i] & 0xC0) != 0x80) {
             break;
         }
 
@@ -95,12 +82,20 @@ bool dyn_str_utf8_pop_back_codepoint(dyn_str_utf8_t *str)
     return true;
 }
 
+/**
+ * @brief Found a codepoint under desired position
+ * @param dest string to which would part be appended
+ * @param start_cp position where insert src
+ * @param src src, from which copy would happen
+ * @return True - success
+ * @return False - error with allocation
+ */
 bool dyn_str_utf8_insert(dyn_str_utf8_t *dest, const size_t start_cp, const dyn_str_utf8_t *src)
 {
     if (dest == NULL || src == NULL || src->ptr == NULL) return false;
 
     size_t byte_offset = 0;
-    if (!codepoint_to_byte_offset(dest, start_cp, &byte_offset)) {
+    if (!dyn_str_utf8_codepoint_to_byte_offset(dest, start_cp, &byte_offset)) {
         return false;
     }
 
@@ -142,18 +137,117 @@ bool dyn_str_utf8_insert(dyn_str_utf8_t *dest, const size_t start_cp, const dyn_
     return true;
 }
 
+/**
+ * @brief Found a codepoint under desired position
+ * @param dest string to which would part be appended
+ * @param start_cp position where insert src
+ * @param codepoint codepoint to be inserted
+ * @return True - success
+ * @return False - error with allocation, invalid UTF-8 string
+ */
+bool dyn_str_utf8_insert_codepoint_uint32_t(dyn_str_utf8_t *dest, const size_t start_cp, const uint32_t codepoint)
+{
+    if (dest == NULL) return false;
+
+    const utf8_delim_bytes_t bytes = dyn_str_utf8_encode_utf8(codepoint);
+    if (bytes.len == 0)
+    {
+        return false;
+    }
+
+    size_t length = 0;
+    if (!dyn_str_utf8_length(dest, &length))
+    {
+        return false;
+    }
+    if (start_cp > length)
+    {
+        return false;
+    }
+
+    const size_t desired_capacity = dest->size + bytes.len;
+    if (desired_capacity > dest->capacity)
+    {
+        if (!dyn_str_utf8_grow(dest, desired_capacity))
+        {
+            return false;
+        }
+    }
+
+    size_t byte_offset;
+    if (!dyn_str_utf8_codepoint_to_byte_offset(dest, start_cp, &byte_offset))
+    {
+        return false;
+    }
+
+    const size_t bytes_to_move = dest->size - byte_offset;
+    if (bytes_to_move > 0) {
+        memmove(dest->ptr + byte_offset + bytes.len, dest->ptr + byte_offset, bytes_to_move);
+    }
+    memcpy(dest->ptr + byte_offset, bytes.bytes, bytes.len);
+
+    dest->size += bytes.len;
+    return true;
+}
+
+/**
+ * @brief Found a codepoint under desired position
+ * @param dest string to which would part be appended
+ * @param start_cp position where insert src
+ * @param ptr pointer to const char*, which would be inserted
+ * @return True - success
+ * @return False - error with allocation, invalid UTF-8 string
+ */
+bool dyn_str_utf8_insert_codepoint_char_ptr(dyn_str_utf8_t *dest, const size_t start_cp, const char *ptr)
+{
+    if (dest == NULL || ptr == NULL) {
+        return false;
+    }
+
+    const size_t insert_len = strlen(ptr);
+    if (insert_len == 0) {
+        return true;
+    }
+
+    if (!dyn_str_utf8_is_valid_utf8_cstring((const utf8_byte*)ptr, insert_len)) {
+        return false;
+    }
+
+    size_t byte_offset = 0;
+    if (!dyn_str_utf8_codepoint_to_byte_offset(dest, start_cp, &byte_offset)) {
+        return false;
+    }
+
+    const size_t desired_capacity = dest->size + insert_len;
+    if (desired_capacity > dest->capacity) {
+        if (!dyn_str_utf8_grow(dest, desired_capacity)) {
+            return false;
+        }
+    }
+
+    const size_t bytes_to_move = dest->size - byte_offset;
+    if (bytes_to_move > 0) {
+        memmove(dest->ptr + byte_offset + insert_len, dest->ptr + byte_offset, bytes_to_move);
+    }
+
+    memcpy(dest->ptr + byte_offset, ptr, insert_len);
+
+    dest->size += insert_len;
+    return true;
+}
+
 bool dyn_str_utf8_erase(dyn_str_utf8_t *str, const size_t start_cp, const size_t count_cp) // NOLINT(readability-non-const-parameter)
 {
     if (str == NULL || str->ptr == NULL) return false;
     if (count_cp == 0) return true;
 
     size_t byte_offset_start = 0;
-    if (!codepoint_to_byte_offset(str, start_cp, &byte_offset_start)) {
+    if (!dyn_str_utf8_codepoint_to_byte_offset(str, start_cp, &byte_offset_start)) {
         return false;
     }
 
     size_t byte_offset_end = 0;
-    if (!codepoint_to_byte_offset(str, start_cp + count_cp, &byte_offset_end)) {
+    if (!dyn_str_utf8_codepoint_to_byte_offset(str, start_cp + count_cp, &byte_offset_end)) {
         return false;
     }
 
@@ -280,7 +374,7 @@ bool dyn_str_utf8_trim(dyn_str_utf8_t *str) // NOLINT(readability-non-const-para
 
         const uint32_t cp = utf8_bytes_to_uint32((const char*)&str->ptr[start_byte]);
 
-        if (!is_utf8_whitespace(cp)) {
+        if (!dyn_str_utf8_is_utf8_whitespace(cp)) {
             break;
         }
 
@@ -306,7 +400,7 @@ bool dyn_str_utf8_trim(dyn_str_utf8_t *str) // NOLINT(readability-non-const-para
 
         const uint32_t cp = utf8_bytes_to_uint32((const char*)&str->ptr[scan]);
 
-        if (!is_utf8_whitespace(cp)) {
+        if (!dyn_str_utf8_is_utf8_whitespace(cp)) {
             break;
         }
 

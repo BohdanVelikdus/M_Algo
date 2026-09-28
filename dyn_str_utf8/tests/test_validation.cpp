@@ -45,8 +45,7 @@ class Utf8InvalidTest : public ::testing::TestWithParam<InvalidTestCase> {};
 TEST_P(Utf8InvalidTest, ReturnsFalseForInvalidUTF8) {
     const auto& param = GetParam();
     dyn_str_utf8_t str = DYN_STR_UTF8_ZERO;
-    ASSERT_TRUE(dyn_str_utf8_from_cstr(&str, STDLIB_ALLOCATOR, param.bytes.data()));
-    EXPECT_FALSE(dyn_str_utf8_is_valid(&str)) << "Failed case: " << param.description;
+    ASSERT_FALSE(dyn_str_utf8_from_cstr(&str, STDLIB_ALLOCATOR, param.bytes.data()));
     dyn_str_utf8_destroy(&str);
 }
 
