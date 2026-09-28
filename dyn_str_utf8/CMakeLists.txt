@@ -12,6 +12,7 @@ add_library(${DynStrUtf8Libname}
     ${CMAKE_CURRENT_SOURCE_DIR}/src/dyn_str_utf8_io.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/dyn_str_utf8_encoding.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/dyn_str_utf8_copy_swap.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/dyn_str_utf8_stdlib_allocator.c
 )
 
 target_include_directories(${DynStrUtf8Libname}

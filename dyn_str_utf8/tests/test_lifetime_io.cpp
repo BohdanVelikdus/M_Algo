@@ -94,7 +94,7 @@ struct AllocatorTracker {
 
 static AllocatorTracker tracker;
 
-void* tracked_malloc(size_t size) {
+void* tracked_malloc(void* user_data, const size_t size) {
     void* ptr = std::malloc(size);
     if (ptr) {
         tracker.malloc_count++;
@@ -103,7 +103,7 @@ void* tracked_malloc(size_t size) {
     return ptr;
 }
 
-void* tracked_realloc(void* ptr, const size_t new_size) {
+void* tracked_realloc(void* user_data, void* ptr, const size_t new_size) {
 
     void* new_ptr = std::realloc(ptr, new_size);
 
@@ -121,7 +121,7 @@ void* tracked_realloc(void* ptr, const size_t new_size) {
     return new_ptr;
 }
 
-void tracked_free(void* ptr) {
+void tracked_free(void* user_data, void* ptr) {
     if (!ptr) return;
 
     tracker.free_count++;
@@ -135,6 +135,7 @@ TEST(U8_nF, InitWithAllocator)
         .malloc_fn = tracked_malloc,
         .realloc_fn = tracked_realloc,
         .free_fn = tracked_free,
+        .user_data = nullptr,
     };
 
     dyn_str_utf8_t str = DYN_STR_UTF8_ZERO;

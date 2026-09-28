@@ -14,15 +14,16 @@ extern "C" {
 
 typedef unsigned char utf8_byte;
 
-typedef void* (*dyn_malloc_fn)(size_t size);
-typedef void* (*dyn_realloc_fn)(void *ptr, size_t size);
-typedef void (*dyn_free_fn)(void *ptr);
+typedef void* (*dyn_malloc_fn)(void *user_data, size_t size);
+typedef void* (*dyn_realloc_fn)(void *user_data, void *ptr, size_t new_size);
+typedef void  (*dyn_free_fn)(void *user_data, void *ptr);
 
 typedef struct
 {
     dyn_malloc_fn malloc_fn;
     dyn_realloc_fn realloc_fn;
     dyn_free_fn free_fn;
+    void *user_data;
 } dyn_allocator_t;
 
 typedef struct
@@ -38,8 +39,16 @@ typedef struct {
     size_t len;
 } utf8_delim_bytes_t;
 
+void* wrapped_malloc(void *user_data, size_t size);
+
+void* wrapped_realloc(void *user_data, void *ptr, size_t size);
+
+void wrapped_free(void *user_data, void *ptr);
+
 // Allocator
-static const dyn_allocator_t STDLIB_ALLOCATOR = { .malloc_fn = malloc, .realloc_fn = realloc, .free_fn = free };
+static const dyn_allocator_t STDLIB_ALLOCATOR = { .malloc_fn = wrapped_malloc, .realloc_fn = wrapped_realloc, .free_fn = wrapped_free };
+
+
 
 #define DYN_STR_UTF8_ZERO { \
     .ptr = NULL, \

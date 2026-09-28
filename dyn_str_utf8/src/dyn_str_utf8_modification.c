@@ -108,7 +108,7 @@ bool dyn_str_utf8_insert(dyn_str_utf8_t *dest, const size_t start_cp, const dyn_
     unsigned char *temp_src = NULL;
 
     if (dest == src) {
-        temp_src = (unsigned char *)dest->allocator.malloc_fn(src->size);
+        temp_src = (unsigned char *)dest->allocator.malloc_fn(dest->allocator.user_data, src->size);
         if (temp_src == NULL) return false;
 
         memcpy(temp_src, src->ptr, src->size);
@@ -118,7 +118,7 @@ bool dyn_str_utf8_insert(dyn_str_utf8_t *dest, const size_t start_cp, const dyn_
     if (dest->capacity < required_capacity) {
         if (!dyn_str_utf8_grow(dest, required_capacity)) {
             if (temp_src) {
-                dest->allocator.free_fn(temp_src);
+                dest->allocator.free_fn(dest->allocator.user_data, temp_src);
             }
             return false;
         }
@@ -131,7 +131,7 @@ bool dyn_str_utf8_insert(dyn_str_utf8_t *dest, const size_t start_cp, const dyn_
     memcpy(dest->ptr + byte_offset, src_bytes, src->size);
     dest->size += src->size;
     if (temp_src) {
-        dest->allocator.free_fn(temp_src);
+        dest->allocator.free_fn(dest->allocator.user_data, temp_src);
     }
 
     return true;

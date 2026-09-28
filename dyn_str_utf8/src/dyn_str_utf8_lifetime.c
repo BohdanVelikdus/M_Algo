@@ -15,7 +15,7 @@ bool dyn_str_utf8_init(dyn_str_utf8_t *str, const size_t initial_capacity)
     if (str == NULL || initial_capacity <= 0) return false;
     str->allocator = STDLIB_ALLOCATOR;
 
-    str->ptr = str->allocator.malloc_fn(sizeof(char) * initial_capacity);
+    str->ptr = str->allocator.malloc_fn(str->allocator.user_data, sizeof(char) * initial_capacity);
     if (str->ptr == NULL) return false;
     str->size = 0;
     str->capacity = initial_capacity;
@@ -35,7 +35,7 @@ bool dyn_str_utf8_init_with_allocator(dyn_str_utf8_t *str, const dyn_allocator_t
     if (str == NULL || initial_capacity <= 0) return false;
     str->allocator = allocator;
 
-    str->ptr = str->allocator.malloc_fn(sizeof(char) * initial_capacity);
+    str->ptr = str->allocator.malloc_fn(str->allocator.user_data, sizeof(char) * initial_capacity);
     if (str->ptr == NULL) return false;
     str->size = 0;
     str->capacity = initial_capacity;
@@ -87,7 +87,7 @@ void dyn_str_utf8_destroy(dyn_str_utf8_t *str)
     if (str == NULL) return;
 
     if (str->ptr != NULL) {
-        str->allocator.free_fn(str->ptr);
+        str->allocator.free_fn(str->allocator.user_data, str->ptr);
     }
     str->ptr = NULL;
     str->size = 0;
