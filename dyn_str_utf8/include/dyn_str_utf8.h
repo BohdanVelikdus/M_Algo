@@ -61,6 +61,7 @@ static const dyn_allocator_t STDLIB_ALLOCATOR = { .malloc_fn = wrapped_malloc, .
 bool dyn_str_utf8_init(dyn_str_utf8_t *str, size_t initial_capacity);
 bool dyn_str_utf8_init_with_allocator(dyn_str_utf8_t *str, dyn_allocator_t allocator, size_t initial_capacity);
 bool dyn_str_utf8_from_cstr(dyn_str_utf8_t *str, dyn_allocator_t allocator, const char *cstr);
+bool dyn_str_utf8_from_cstr_count(dyn_str_utf8_t *str, dyn_allocator_t allocator, const char *cstr, size_t count);
 void dyn_str_utf8_destroy(dyn_str_utf8_t *str);
 
 // Copy & Swap
